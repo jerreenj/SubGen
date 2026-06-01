@@ -1,0 +1,15 @@
+.git
+.local
+.agents
+.cache
+node_modules
+**/node_modules
+**/dist
+**/.tsbuildinfo
+artifacts/mockup-sandbox
+lib/integrations
+lib/integrations-openai-ai-server
+lib/integrations-openai-ai-react
+replit.md
+replit.nix
+scripts/push-to-github.mjs
