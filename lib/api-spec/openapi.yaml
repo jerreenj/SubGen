@@ -1,0 +1,565 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: API specification
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: projects
+    description: Subtitle project operations
+  - name: transcription
+    description: AI transcription operations
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /projects:
+    get:
+      operationId: listProjects
+      tags: [projects]
+      summary: List all subtitle projects
+      responses:
+        "200":
+          description: List of projects
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Project"
+    post:
+      operationId: createProject
+      tags: [projects]
+      summary: Create a new subtitle project
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectInput"
+      responses:
+        "201":
+          description: Created project
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectWithSegments"
+
+  /projects/stats:
+    get:
+      operationId: getProjectsStats
+      tags: [projects]
+      summary: Get overview stats for subtitle projects
+      responses:
+        "200":
+          description: Stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectStats"
+
+  /projects/{id}:
+    get:
+      operationId: getProject
+      tags: [projects]
+      summary: Get project with all segments
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Project with segments
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectWithSegments"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+    patch:
+      operationId: updateProject
+      tags: [projects]
+      summary: Update project name or style
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectUpdate"
+      responses:
+        "200":
+          description: Updated project
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectWithSegments"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+    delete:
+      operationId: deleteProject
+      tags: [projects]
+      summary: Delete a project
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /projects/{id}/segments:
+    post:
+      operationId: createSegment
+      tags: [projects]
+      summary: Add a subtitle segment to a project
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SegmentInput"
+      responses:
+        "201":
+          description: Created segment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Segment"
+
+  /projects/{id}/segments/batch:
+    put:
+      operationId: replaceSegments
+      tags: [projects]
+      summary: Replace all segments for a project (used after transcription or bulk edit)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SegmentBatch"
+      responses:
+        "200":
+          description: Replaced segments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Segment"
+
+  /segments/{id}:
+    patch:
+      operationId: updateSegment
+      tags: [projects]
+      summary: Update a subtitle segment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SegmentUpdate"
+      responses:
+        "200":
+          description: Updated segment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Segment"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+    delete:
+      operationId: deleteSegment
+      tags: [projects]
+      summary: Delete a subtitle segment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /projects/{id}/export:
+    get:
+      operationId: exportProject
+      tags: [projects]
+      summary: Export subtitles as SRT, VTT, or ASS
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Export result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExportResult"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /transcribe:
+    post:
+      operationId: transcribeAudio
+      tags: [transcription]
+      summary: Transcribe audio or video file and return subtitle segments
+      description: Accepts multipart form with audio/video file, returns timed segments
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/TranscribeInput"
+      responses:
+        "200":
+          description: Transcription result with segments
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TranscribeResult"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    CaptionStyle:
+      type: object
+      properties:
+        fontFamily:
+          type: string
+        fontSize:
+          type: integer
+        fontWeight:
+          type: string
+        color:
+          type: string
+        backgroundColor:
+          type: string
+        position:
+          type: string
+          enum: [bottom, top, middle]
+        textAlign:
+          type: string
+          enum: [left, center, right]
+        textShadow:
+          type: boolean
+        italic:
+          type: boolean
+        uppercase:
+          type: boolean
+      required:
+        - fontFamily
+        - fontSize
+        - fontWeight
+        - color
+        - backgroundColor
+        - position
+        - textAlign
+        - textShadow
+        - italic
+        - uppercase
+
+    Project:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        mediaUrl:
+          type: ["string", "null"]
+        duration:
+          type: ["number", "null"]
+        style:
+          $ref: "#/components/schemas/CaptionStyle"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - style
+        - createdAt
+        - updatedAt
+
+    ProjectWithSegments:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        mediaUrl:
+          type: ["string", "null"]
+        duration:
+          type: ["number", "null"]
+        style:
+          $ref: "#/components/schemas/CaptionStyle"
+        segments:
+          type: array
+          items:
+            $ref: "#/components/schemas/Segment"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - style
+        - segments
+        - createdAt
+        - updatedAt
+
+    ProjectInput:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        description:
+          type: string
+      required:
+        - name
+
+    ProjectUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        description:
+          type: string
+        style:
+          $ref: "#/components/schemas/CaptionStyle"
+
+    ProjectStats:
+      type: object
+      properties:
+        totalProjects:
+          type: integer
+        totalSegments:
+          type: integer
+        recentProjects:
+          type: array
+          items:
+            $ref: "#/components/schemas/Project"
+      required:
+        - totalProjects
+        - totalSegments
+        - recentProjects
+
+    Segment:
+      type: object
+      properties:
+        id:
+          type: integer
+        projectId:
+          type: integer
+        startTime:
+          type: number
+        endTime:
+          type: number
+        text:
+          type: string
+        order:
+          type: integer
+      required:
+        - id
+        - projectId
+        - startTime
+        - endTime
+        - text
+        - order
+
+    SegmentInput:
+      type: object
+      properties:
+        startTime:
+          type: number
+        endTime:
+          type: number
+        text:
+          type: string
+        order:
+          type: integer
+      required:
+        - startTime
+        - endTime
+        - text
+        - order
+
+    SegmentUpdate:
+      type: object
+      properties:
+        startTime:
+          type: number
+        endTime:
+          type: number
+        text:
+          type: string
+        order:
+          type: integer
+
+    SegmentBatch:
+      type: object
+      properties:
+        segments:
+          type: array
+          items:
+            $ref: "#/components/schemas/SegmentInput"
+      required:
+        - segments
+
+    TranscribeInput:
+      type: object
+      properties:
+        language:
+          type: string
+          description: Optional language code (e.g. 'en', 'es')
+
+    TranscribeResult:
+      type: object
+      properties:
+        text:
+          type: string
+        language:
+          type: string
+        segments:
+          type: array
+          items:
+            $ref: "#/components/schemas/TranscribedSegment"
+      required:
+        - text
+        - language
+        - segments
+
+    TranscribedSegment:
+      type: object
+      properties:
+        startTime:
+          type: number
+        endTime:
+          type: number
+        text:
+          type: string
+        order:
+          type: integer
+      required:
+        - startTime
+        - endTime
+        - text
+        - order
+
+    ExportResult:
+      type: object
+      properties:
+        content:
+          type: string
+        format:
+          type: string
+        filename:
+          type: string
+      required:
+        - content
+        - format
+        - filename
+
+    ApiError:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
