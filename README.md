@@ -2,7 +2,7 @@
 
 **Professional subtitle and caption generator** — upload audio or video, get AI-powered transcriptions via Whisper, edit them in a Premiere Pro-style timeline, style captions with a live inspector, and export as SRT, VTT, or ASS.
 
-Bring your own OpenAI or OpenRouter key. Nothing is stored server-side.
+Bring your own OpenAI or OpenRouter key. API keys never touch the server.
 
 ---
 
@@ -10,58 +10,48 @@ Bring your own OpenAI or OpenRouter key. Nothing is stored server-side.
 
 - **AI Transcription** — upload MP4, WEBM, MP3, or WAV → timed subtitles in seconds via Whisper
 - **Timeline Editor** — inline text editing, timestamp controls, add/delete segments
-- **Style Inspector** — live preview, Google Fonts (Bebas Neue, Inter, Montserrat, Space Mono…), size, weight, color, background, drop shadow, uppercase, position
+- **Style Inspector** — live preview, Google Fonts, size, weight, color, background, drop shadow, uppercase, position
 - **Multi-format Export** — SRT, VTT, or ASS
-- **Bring Your Own Key** — OpenAI or OpenRouter key stays in your browser only
+- **Bring Your Own Key** — OpenAI or OpenRouter key stays in your browser; never stored on the server
 
 ---
 
-## 🚀 Deploy to Vercel (one-click)
+## 🚀 Deploy (one-click, free)
 
-### Step 1 — Get a free database
+SubGen has two parts: a **React frontend** and an **Express API**. Deploy each in one click.
 
-SubGen needs PostgreSQL. Use either:
+### Part 1 — API server on Railway
 
-| Provider | Free tier | Link |
-|---|---|---|
-| **Neon** | 512 MB | [neon.tech](https://neon.tech) |
-| **Supabase** | 500 MB | [supabase.com](https://supabase.com) |
+1. Go to **[railway.app](https://railway.app)** → New Project → Deploy from GitHub → select **SubGen**
+2. Set the **Root Directory** to `artifacts/api-server`
+3. Add environment variable: `DATABASE_URL` — get a free Postgres from [Neon](https://neon.tech) or [Supabase](https://supabase.com)
+4. Deploy — Railway gives you a URL like `https://subgen-api.up.railway.app`
+5. After deploy, run the DB migration once:
+   ```bash
+   DATABASE_URL=<your-url> pnpm --filter @workspace/db run push
+   ```
+   Or use the Railway shell tab.
 
-Copy your `DATABASE_URL` connection string (looks like `postgresql://user:pass@host/db`).
+### Part 2 — Frontend on Vercel
 
-### Step 2 — Import to Vercel
-
-1. Go to **[vercel.com/new](https://vercel.com/new)**
-2. Click **"Import Git Repository"** → select **SubGen**
-3. Vercel auto-detects the config from `vercel.json` — no changes needed
-4. Add one environment variable:
+1. Go to **[vercel.com/new](https://vercel.com/new)** → Import `jerreenj/SubGen`
+2. Vercel auto-reads `vercel.json` — no settings to change
+3. Add one environment variable:
 
    | Name | Value |
    |---|---|
-   | `DATABASE_URL` | your connection string from Step 1 |
+   | `VITE_API_URL` | your Railway URL from Part 1, e.g. `https://subgen-api.up.railway.app` |
 
-5. Click **Deploy** ✅
+4. Click **Deploy** ✅
 
-### Step 3 — Run the database migration
+### Part 3 — Add your AI key in the app
 
-After the first deploy, open Vercel's **Terminal** tab (or run locally):
-
-```bash
-pnpm --filter @workspace/db run push
-```
-
-> Or use [drizzle-kit push](https://orm.drizzle.team/docs/overview) — it only needs `DATABASE_URL`.
-
-### Step 4 — Add your AI key
-
-Open your deployed app → click **Settings** (top-right) → paste your API key:
+Open your deployed app → click **Settings** (top-right) → paste your key:
 
 | Provider | Base URL | Model |
 |---|---|---|
 | **OpenAI** | *(leave blank)* | `whisper-1` |
 | **OpenRouter** | `https://openrouter.ai/api/v1` | `openai/whisper-large-v3` |
-
-That's it. Upload a file and start transcribing.
 
 ---
 
@@ -70,8 +60,8 @@ That's it. Upload a file and start transcribing.
 ### Prerequisites
 
 - Node.js 20+
-- pnpm 9+
-- PostgreSQL (or a free Neon/Supabase database)
+- pnpm 9+ (`npm install -g pnpm`)
+- PostgreSQL (or a free Neon/Supabase connection string)
 
 ### Setup
 
@@ -83,21 +73,21 @@ cd SubGen
 # 2. Install
 pnpm install
 
-# 3. Set environment variable
+# 3. Set env vars
 cp .env.example .env
-# Edit .env and set DATABASE_URL
+# Edit .env and fill in DATABASE_URL
 
-# 4. Push schema
+# 4. Push DB schema
 pnpm --filter @workspace/db run push
 
-# 5. Start API server (port 8080)
+# 5. Start API server (terminal 1)
 pnpm --filter @workspace/api-server run dev
 
-# 6. Start frontend (in a second terminal)
+# 6. Start frontend (terminal 2)
 pnpm --filter @workspace/subtitle-generator run dev
 ```
 
-Open the URL that Vite prints (usually `http://localhost:5173`).
+Open the URL Vite prints (usually `http://localhost:5173`).
 
 ---
 
@@ -105,14 +95,14 @@ Open the URL that Vite prints (usually `http://localhost:5173`).
 
 ```
 SubGen/
-├── api/
-│   └── index.ts              # Vercel serverless function (wraps Express)
 ├── artifacts/
 │   ├── api-server/           # Express 5 REST API
-│   │   └── src/routes/
-│   │       ├── projects.ts   # CRUD + SRT/VTT/ASS export
-│   │       ├── segments.ts   # Segment CRUD + batch replace
-│   │       └── transcribe.ts # Whisper transcription endpoint
+│   │   └── src/
+│   │       ├── app.ts        # Express app
+│   │       └── routes/
+│   │           ├── projects.ts   # CRUD + SRT/VTT/ASS export
+│   │           ├── segments.ts   # Segment CRUD + batch replace
+│   │           └── transcribe.ts # Whisper transcription endpoint
 │   └── subtitle-generator/   # React + Vite frontend
 │       └── src/
 │           ├── pages/
@@ -127,7 +117,7 @@ SubGen/
 │   ├── api-client-react/     # Generated TanStack Query hooks
 │   ├── api-zod/              # Generated Zod schemas
 │   └── db/                   # Drizzle ORM schema + client
-├── vercel.json               # Vercel deployment config
+├── vercel.json               # Vercel frontend deployment config
 └── .env.example              # Environment variable reference
 ```
 
@@ -151,7 +141,7 @@ SubGen/
 
 ### Transcription headers
 
-The `/api/transcribe` endpoint reads your AI credentials from request headers — keys are never stored on the server:
+`POST /api/transcribe` reads your AI credentials from request headers — keys never stored server-side:
 
 | Header | Required | Description |
 |---|---|---|
@@ -170,16 +160,24 @@ The `/api/transcribe` endpoint reads your AI credentials from request headers �
 | Database | PostgreSQL |
 | Transcription | OpenAI Whisper API (or any OpenAI-compatible endpoint) |
 | Monorepo | pnpm workspaces, TypeScript 5.9 |
-| Deployment | Vercel (frontend + API as serverless function) |
+| Deployment | Vercel (frontend) + Railway (API) |
 
 ---
 
 ## 🔑 Environment Variables
 
+### API server (`artifacts/api-server`)
+
 | Variable | Required | Description |
 |---|---|---|
 | `DATABASE_URL` | ✅ | PostgreSQL connection string |
-| `PORT` | dev only | Port for standalone API server (Vercel manages this automatically) |
+| `PORT` | dev only | Port for the API server (Railway sets this automatically) |
+
+### Frontend (`artifacts/subtitle-generator`)
+
+| Variable | Required | Description |
+|---|---|---|
+| `VITE_API_URL` | production | URL of the deployed API server (e.g. `https://subgen-api.up.railway.app`) — leave unset for local dev |
 
 ---
 
