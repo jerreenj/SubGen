@@ -3,8 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { ArrowLeft } from "lucide-react";
-import { useCreateProject, getListProjectsQueryKey } from "@workspace/api-client-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { createProject } from "@/lib/storage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -16,44 +15,17 @@ const formSchema = z.object({
   description: z.string().optional(),
 });
 
-const defaultStyle = {
-  fontFamily: "Inter",
-  fontSize: 48,
-  fontWeight: "bold",
-  color: "#ffffff",
-  backgroundColor: "rgba(0, 0, 0, 0.5)",
-  position: "bottom" as const,
-  textAlign: "center" as const,
-  textShadow: true,
-  italic: false,
-  uppercase: true,
-};
-
 export default function NewProject() {
   const [, setLocation] = useLocation();
-  const queryClient = useQueryClient();
-  const createProject = useCreateProject();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: "",
-      description: "",
-    },
+    defaultValues: { name: "", description: "" },
   });
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    createProject.mutate({
-      data: {
-        name: values.name,
-        description: values.description,
-      }
-    }, {
-      onSuccess: (data) => {
-        queryClient.invalidateQueries({ queryKey: getListProjectsQueryKey() });
-        setLocation(`/projects/${data.id}`);
-      }
-    });
+    const project = createProject(values.name, values.description || undefined);
+    setLocation(`/projects/${project.id}`);
   }
 
   return (
@@ -92,10 +64,10 @@ export default function NewProject() {
                   <FormItem>
                     <FormLabel>Description (Optional)</FormLabel>
                     <FormControl>
-                      <Textarea 
-                        placeholder="Brief notes about this project" 
-                        className="bg-background resize-none min-h-[100px]" 
-                        {...field} 
+                      <Textarea
+                        placeholder="Brief notes about this project"
+                        className="bg-background resize-none min-h-[100px]"
+                        {...field}
                       />
                     </FormControl>
                     <FormMessage />
@@ -104,8 +76,8 @@ export default function NewProject() {
               />
 
               <div className="pt-4 flex justify-end">
-                <Button type="submit" size="lg" disabled={createProject.isPending}>
-                  {createProject.isPending ? "Creating Workspace..." : "Create Workspace"}
+                <Button type="submit" size="lg">
+                  Create Workspace
                 </Button>
               </div>
             </form>
