@@ -6,10 +6,11 @@ node_modules
 **/node_modules
 **/dist
 **/.tsbuildinfo
+api
 artifacts/mockup-sandbox
 lib/integrations
 lib/integrations-openai-ai-server
 lib/integrations-openai-ai-react
 replit.md
 replit.nix
-scripts/push-to-github.mjs
+scripts
